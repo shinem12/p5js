@@ -1,0 +1,313 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>p5.js 과제 #4 2025197 장현수</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  </head>
+  <body>
+    <!-- UI 컨트롤 -->
+    <div style="position: absolute; top: 410px; left: 10px; z-index: 100;">
+      <button onclick="startRecord()" style="padding: 5px 10px;">Save GIF (s)</button>
+    </div>
+
+    <script>
+      let starList = [];
+      let myFish = [];
+      
+      function setup() {
+        createCanvas(600, 400);
+        noStroke();
+
+        // 별 위치 정하기
+        for (let i = 0; i < 50; i++) {
+          starList.push({
+            x: random(600),
+            y: random(240),
+            s: random(1, 3),
+            o: random(1000) // 반짝임 오프셋
+          });
+        }
+        
+        // 물고기 점프:
+        myFish.push({ t1: 0.12, t2: 0.18, x: 150 });
+        myFish.push({ t1: 0.82, t2: 0.88, x: 450 });
+      }
+
+      function draw() {
+        // 10초
+        let ms = millis() % 10000;
+        let t = ms / 10000; // 0.0 ~ 1.0
+
+        // 배경 색상
+        let c1, c2, sea1, sea2;
+        
+        // 색상
+        let daySky1 = color(60, 160, 255);
+        let daySky2 = color(180, 220, 255);
+        let daySea1 = color(0, 100, 180);
+        let daySea2 = color(0, 60, 120);
+
+        let sunsetSky1 = color(60, 40, 100);
+        let sunsetSky2 = color(255, 100, 80);
+        let sunsetSea1 = color(160, 60, 80);
+        let sunsetSea2 = color(80, 30, 50);
+
+        let nightSky1 = color(10, 10, 30);
+        let nightSky2 = color(30, 40, 80);
+        let nightSea1 = color(20, 30, 60);
+        let nightSea2 = color(10, 10, 20);
+
+        // 시간대에 따른 색 섞기 (LERP)
+        // 0~0.25: 낮->노을
+        // 0.25~0.5: 노을->밤
+        // 0.5~0.75: 밤->여명
+        // 0.75~1.0: 여명->낮
+        if (t < 0.25) {
+          let a = map(t, 0, 0.25, 0, 1);
+          c1 = lerpColor(daySky1, sunsetSky1, a);
+          c2 = lerpColor(daySky2, sunsetSky2, a);
+          sea1 = lerpColor(daySea1, sunsetSea1, a);
+          sea2 = lerpColor(daySea2, daySea2, a);
+        } else if (t < 0.5) {
+          let a = map(t, 0.25, 0.5, 0, 1);
+          c1 = lerpColor(sunsetSky1, nightSky1, a);
+          c2 = lerpColor(sunsetSky2, nightSky2, a);
+          sea1 = lerpColor(sunsetSea1, nightSea1, a);
+          sea2 = lerpColor(daySea2, nightSea2, a);
+        } else if (t < 0.75) {
+          let a = map(t, 0.5, 0.75, 0, 1);
+          c1 = lerpColor(nightSky1, sunsetSky1, a);
+          c2 = lerpColor(nightSky2, sunsetSky2, a);
+          sea1 = lerpColor(nightSea1, sunsetSea1, a);
+          sea2 = lerpColor(nightSea2, sunsetSea2, a);
+        } else {
+          let a = map(t, 0.75, 1.0, 0, 1);
+          c1 = lerpColor(sunsetSky1, daySky1, a);
+          c2 = lerpColor(sunsetSky2, daySky2, a);
+          sea1 = lerpColor(sunsetSea1, daySea1, a);
+          sea2 = lerpColor(sunsetSea2, daySea2, a);
+        }
+
+        // 1. 하늘 그리기 (그라데이션)
+        for (let y = 0; y <= 200; y += 5) {
+          let rate = map(y, 0, 200, 0, 1);
+          fill(lerpColor(c1, c2, rate));
+          rect(0, y, 600, 5);
+        }
+
+        // 2. 별 그리기 (밤에만)
+        let starAlpha = 0;
+        if (t > 0.3 && t < 0.7) {
+          if (t < 0.4) starAlpha = map(t, 0.3, 0.4, 0, 200);
+          else if (t > 0.6) starAlpha = map(t, 0.6, 0.7, 200, 0);
+          else starAlpha = 200;
+        }
+
+        if (starAlpha > 0) {
+          for (let i = 0; i < starList.length; i++) {
+            let s = starList[i];
+            let twinkle = sin(millis() * 0.005 + s.o); // 반짝반짝
+            fill(255, 255, 255, starAlpha * (0.5 + 0.5 * twinkle));
+            ellipse(s.x, s.y, s.s, s.s);
+          }
+          
+          // 유성 (0.55 ~ 0.60 사이)
+          if (t > 0.55 && t < 0.60) {
+            let p = map(t, 0.55, 0.60, 0, 1);
+            let sx = lerp(400, 200, p);
+            let sy = lerp(50, 150, p);
+            stroke(255, 255, 255, 200 * (1 - p));
+            strokeWeight(2);
+            line(sx, sy, sx + 20, sy - 10);
+            noStroke();
+            fill(255);
+            ellipse(sx, sy, 3, 3);
+          }
+        }
+
+        // 3. 해와 달
+        // 해: 낮동안 이동
+        if (t < 0.3 || t > 0.7) {
+          let sx, sy;
+          if (t < 0.3) {
+            sx = map(t, 0, 0.3, 300, 650);
+            sy = map(t, 0, 0.3, 80, 350);
+          } else {
+            sx = map(t, 0.7, 1.0, -50, 300);
+            sy = map(t, 0.7, 1.0, 350, 80);
+          }
+          // 해 그리기
+          for (let r = 80; r > 0; r -= 20) {
+            fill(255, 200, 100, 30);
+            ellipse(sx, sy, r * 2.5, r * 2.5);
+          }
+          fill(255, 220, 150);
+          ellipse(sx, sy, 60, 60);
+        }
+
+        // 달: 밤동안 이동
+        if (t > 0.2 && t < 0.8) {
+          let mx = map(t, 0.2, 0.8, -50, 650);
+          let my = 350 - sin(map(t, 0.2, 0.8, 0, PI)) * 250;
+          
+          fill(200, 220, 255, 30);
+          ellipse(mx, my, 80, 80);
+          fill(240, 240, 255);
+          ellipse(mx, my, 50, 50); // 달 본체
+          fill(200, 200, 220, 100);
+          ellipse(mx - 10, my + 5, 15, 15); // 크레이터
+          ellipse(mx + 8, my - 8, 10, 10);
+        }
+
+        // 4. 바다 그리기
+        for (let y = 200; y <= 400; y += 5) {
+          let rate = map(y, 200, 400, 0, 1);
+          fill(lerpColor(sea1, sea2, rate));
+          rect(0, y, 600, 5);
+        }
+
+        // 5. 파도 그리기
+        strokeWeight(1.5);
+        stroke(255, 255, 255, 40);
+        for (let i = 0; i < 4; i++) {
+          let waveColor = lerpColor(sea1, color(255), 0.1);
+          waveColor.setAlpha(80);
+          fill(waveColor);
+
+          let wy = 240 + i * 35;
+          let move = cos((t * 10 + i) * 2) * 20; // 움직임
+          ellipse(300 + move, wy, 500 + i * 20, 60 + i * 5);
+        }
+        noStroke();
+
+        // 6. 물고기 점프
+        for (let i = 0; i < myFish.length; i++) {
+          let f = myFish[i];
+          if (t > f.t1 && t < f.t2) {
+            let fp = map(t, f.t1, f.t2, 0, 1);
+            let fx = f.x + fp * 60;
+            let fy = 300 - sin(fp * PI) * 80;
+            let fa = map(fp, 0, 1, -PI/3, PI/3);
+
+            push();
+            translate(fx, fy);
+            rotate(fa);
+            fill(200, 220, 255);
+            ellipse(0, 0, 20, 8); // 몸통
+            triangle(-5, 0, -12, -4, -12, 4); // 꼬리
+            pop();
+          }
+        }
+
+        // 7. 부표 (오른쪽 아래)
+        let bx = 420;
+        let by = 310 + sin(t * 12) * 6; // 둥실둥실
+        
+        push();
+        translate(bx, by);
+        rotate(sin(t * 10) * 0.1);
+        
+        fill(180, 50, 50); // 빨강
+        arc(0, 0, 30, 30, 0, PI);
+        fill(220); // 흰 띠
+        rect(-15, 0, 30, 5);
+        fill(180, 50, 50); // 윗부분
+        rect(-10, -8, 20, 8);
+        fill(80); // 기둥
+        rect(-2, -25, 4, 17);
+
+        // 등 (밤에 깜빡임)
+        let lightColor = color(200);
+        if (t > 0.3 && t < 0.7) {
+           // 빠르게 깜빡임
+           if (sin(t * 100) > 0) {
+             lightColor = color(255, 50, 50);
+             fill(255, 0, 0, 40);
+             ellipse(0, -25, 20, 20); // 빛 번짐
+           }
+        }
+        fill(lightColor);
+        ellipse(0, -25, 8, 8);
+        pop();
+
+        // 그림자
+        fill(0, 0, 0, 30);
+        ellipse(bx, by + 15, 25, 4);
+
+        // 8. 배 두 척
+        // 배 1
+        let b1x = map(t, 0, 1, 50, 550);
+        let b1y = 230 + sin(t * 20) * 5;
+        drawSimpleBoat(b1x, b1y, 1, t);
+        
+        // 배 2
+        let b2x = map(t, 0, 1, 550, 50);
+        let b2y = 260 + cos(t * 25) * 5;
+        drawSimpleBoat(b2x, b2y, -1, t);
+
+        // 9. 창문틀 효과
+        noStroke();
+        fill(255, 255, 255, 15);
+        rect(40, 20, 15, 150);
+        rect(65, 10, 10, 120);
+
+        // 테두리
+        stroke(255, 255, 255, 50);
+        strokeWeight(20);
+        noFill();
+        rect(0, 0, 600, 400);
+        
+        strokeWeight(1); // 안쪽 얇은 선
+        rect(20, 20, 560, 360);
+        
+        // 전체 톤 보정 (Glaze)
+        noStroke();
+        if (t > 0.4 && t < 0.6) {
+          fill(0, 10, 40, 30); // 밤에는 푸르게
+        } else {
+          fill(255, 255, 255, 5);
+        }
+        rect(0, 0, 600, 400);
+      }
+
+      function drawSimpleBoat(x, y, dir, t) {
+        push();
+        translate(x, y);
+        rotate(sin(t * 30 + x) * 0.05); // 흔들림
+        
+        noStroke();
+        // 돛 그리기
+        fill(240, 248, 255, 220);
+        if (dir === 1) { // 오른쪽 방향
+          triangle(0, 0, 0, -40, 30, 0);
+          fill(220, 240, 255, 180);
+          triangle(-5, 0, 5, -30, -20, 0);
+        } else { // 왼쪽 방향
+          triangle(0, 0, 0, -40, -30, 0);
+          fill(220, 240, 255, 180);
+          triangle(5, 0, -5, -30, 20, 0);
+        }
+        
+        // 배 몸통
+        fill(32, 52, 84, 220);
+        rectMode(CENTER);
+        rect(0, 3, 50, 8, 2);
+        rectMode(CORNER);
+        pop();
+      }
+
+      function keyPressed() {
+        if (key === 's') {
+          startRecord();
+        }
+      }
+      
+      function startRecord() {
+        console.log("gggg");
+        saveGif('sea_10s', 10);
+      }
+    </script>
+  </body>
+</html>
