@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Character</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #333;
+            color: white;
+            font-family: sans-serif;
+            flex-direction: column;
+        }
+        canvas {
+            border: 5px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <p><strong>Interactions:</strong></p>
+        <p>🖱️ Move Mouse: Look around | 🖱️ Click: Change Background</p>
+        <p>⌨️ 'H': Toggle Hat | ⌨️ 'O': Open/Close Mouth | ⌨️ 'S': Save GIF (10s)</p>
+    </div>
+    <script>
+        // State variables
+        let bgR = 240, bgG = 248, bgB = 255;
+        let showHat = false;
+        let isMouthOpen = false;
+        let blinkTimer = 0;
+        let isBlinking = false;
+        
+        function setup() {
+            createCanvas(600, 400);
+        }
+
+        function draw() {
+            background(bgR, bgG, bgB);
+
+            // Head bobbing animation
+            let bobY = sin(millis() * 0.003) * 5;
+
+            push();
+            translate(width / 2, height / 2 + 30 + bobY);
+            
+            // --- Hair (Back) ---
+            fill(80, 50, 40);
+            noStroke();
+            ellipse(0, -20, 230, 240); 
+
+            // --- Neck ---
+            fill(255, 220, 190);
+            rect(-30, 80, 60, 60);
+
+            // --- Shirt ---
+            fill(100, 149, 237);
+            beginShape();
+            vertex(-80, 140);
+            curveVertex(-40, 120);
+            curveVertex(40, 120);
+            vertex(80, 140);
+            vertex(80, 200);
+            vertex(-80, 200);
+            endShape(CLOSE);
+
+            // --- Face Shape ---
+            fill(255, 228, 205);
+            stroke(230, 200, 180);
+            strokeWeight(2);
+            beginShape();
+            vertex(-85, -50);
+            bezierVertex(-95, 20, -80, 110, 0, 120);
+            bezierVertex(80, 110, 95, 20, 85, -50);
+            bezierVertex(50, -80, -50, -80, -85, -50);
+            endShape(CLOSE);
+
+            // --- Ears ---
+            fill(255, 228, 205);
+            stroke(230, 200, 180);
+            // Left
+            beginShape();
+            vertex(-88, 10);
+            bezierVertex(-105, 0, -105, 40, -85, 50);
+            endShape();
+            // Right
+            beginShape();
+            vertex(88, 10);
+            bezierVertex(105, 0, 105, 40, 85, 50);
+            endShape();
+
+            // --- Blush ---
+            noStroke();
+            fill(255, 180, 180, 150);
+            ellipse(-55, 55, 35, 20);
+            ellipse(55, 55, 35, 20);
+
+            // --- Eyes Interaction ---
+            // Calculate pupil offset based on mouse position
+            // Constrain the movement so pupils stay in eyes
+            let pupilX = map(mouseX, 0, width, -10, 10);
+            let pupilY = map(mouseY, 0, height, -5, 5);
+            pupilX = constrain(pupilX, -10, 10);
+            pupilY = constrain(pupilY, -5, 5);
+
+            // Blinking Logic
+            blinkTimer++;
+            if (blinkTimer > 200) { // Blink every ~3-4 seconds
+                isBlinking = true;
+                if (blinkTimer > 210) { // Blink lasts ~10 frames
+                    isBlinking = false;
+                    blinkTimer = 0;
+                }
+            }
+
+            // Draw Eyes
+            if (isBlinking) {
+                // Closed eyes (lines)
+                stroke(50, 30, 20);
+                strokeWeight(3);
+                noFill();
+                arc(-40, 10, 40, 10, PI, TWO_PI);
+                arc(40, 10, 40, 10, PI, TWO_PI);
+            } else {
+                // Open eyes
+                // Whites
+                fill(255);
+                stroke(50, 30, 20);
+                strokeWeight(2);
+                ellipse(-40, 10, 50, 55);
+                ellipse(40, 10, 50, 55);
+
+                // Irises & Pupils (Moving)
+                noStroke();
+                fill(20); // Black eyes
+                circle(-40 + pupilX, 10 + pupilY, 35);
+                circle(40 + pupilX, 10 + pupilY, 35);
+
+                // Highlights (Static relative to pupil for cartoon effect, or moving)
+                // Let's make them move with pupil for depth
+                fill(255);
+                circle(-32 + pupilX, 2 + pupilY, 10);
+                circle(-45 + pupilX, 15 + pupilY, 5);
+                circle(48 + pupilX, 2 + pupilY, 10);
+                circle(35 + pupilX, 15 + pupilY, 5);
+
+                // Eyelashes
+                noFill();
+                stroke(40, 30, 20);
+                strokeWeight(3);
+                arc(-40, 10, 50, 55, PI + 0.2, TWO_PI - 0.2);
+                arc(40, 10, 50, 55, PI + 0.2, TWO_PI - 0.2);
+            }
+
+            // --- Eyebrows ---
+            // Eyebrows raise when hat is on (surprise/happy)
+            let browOffset = showHat ? -10 : 0;
+            stroke(80, 50, 40);
+            strokeWeight(4);
+            noFill();
+            arc(-40, -25 + browOffset, 40, 15, PI + 0.2, TWO_PI - 0.2);
+            arc(40, -25 + browOffset, 40, 15, PI + 0.2, TWO_PI - 0.2);
+
+            // --- Nose ---
+            noStroke();
+            fill(230, 180, 160);
+            circle(0, 65, 8);
+
+            // --- Mouth Interaction ---
+            if (isMouthOpen) {
+                fill(200, 100, 100);
+                noStroke();
+                ellipse(0, 90, 30, 40); // Open mouth
+                fill(255, 255, 255, 150); // Tongue/Teeth
+                arc(0, 100, 20, 15, PI, TWO_PI);
+            } else {
+                noFill();
+                stroke(200, 100, 100);
+                strokeWeight(2.5);
+                arc(0, 85, 25, 15, 0.2, PI - 0.2); // Smile
+            }
+
+            // --- Hair (Bangs) ---
+            fill(80, 50, 40);
+            noStroke();
+            beginShape();
+            vertex(-90, -30);
+            bezierVertex(-60, 10, -40, -40, -20, -10);
+            bezierVertex(0, -40, 20, -10, 40, -40);
+            bezierVertex(60, 10, 90, -30, 90, -50);
+            vertex(90, -100);
+            vertex(-90, -100);
+            endShape(CLOSE);
+
+            // --- Hat Interaction ---
+            if (showHat) {
+                // Big Beanie
+                noStroke();
+                
+                // Main body
+                fill(255, 99, 71); // Tomato Red
+                arc(0, -60, 220, 200, PI, TWO_PI); 
+                
+                // Stripes/Pattern
+                fill(255, 160, 122); // Light Salmon
+                arc(0, -60, 180, 160, PI, TWO_PI);
+                fill(255, 99, 71);
+                arc(0, -60, 140, 120, PI, TWO_PI);
+
+                // Cuff (Brim)
+                fill(220, 20, 60); // Crimson
+                rect(-110, -60, 220, 50, 15);
+                
+                // Ribbing on cuff
+                stroke(180, 0, 0);
+                strokeWeight(2);
+                for(let i = -90; i < 100; i+=20) {
+                    line(i, -55, i, -15);
+                }
+                noStroke();
+
+                // Pom-pom
+                fill(255, 250, 240); // FloralWhite
+                circle(0, -160, 60);
+            }
+
+            pop();
+        }
+
+        function mousePressed() {
+            // Change background to random pastel color
+            bgR = random(200, 255);
+            bgG = random(200, 255);
+            bgB = random(200, 255);
+        }
+
+        function keyPressed() {
+            if (key === 'h' || key === 'H') {
+                showHat = !showHat;
+            }
+            if (key === 'o' || key === 'O') {
+                isMouthOpen = !isMouthOpen;
+            }
+            if (key === 's' || key === 'S') {
+                saveGif('interaction_10s', 10);
+            }
+        }
+    </script>
+</body>
+</html>
